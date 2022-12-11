@@ -56,34 +56,65 @@ class Node(CountCmp):
     right: Tree
 
 
-Tree = Union[Leaf, Node]
+Tree = Union[Leaf, Node] 
 
 
-def encoding(x: str) -> Tree:
-    """Create Huffman tree for `x`."""
-    # Make a heap out of all the leaves, i.e. counts of the letters
+
+def encoding(x: str) -> Tree: # build_huffmann_tree().
+    """Create Huffman tree for `x`.
+    >>> x='aabacabaaa'
+    >>> encoding(x)
+    Node(count=10, left=Node(count=3, left=Leaf(letter='c', count=1),\
+ right=Leaf(letter='b', count=2)), right=Leaf(letter='a', count=7))
+    """
+    # Make a heap out of all the leaves, i.e. counts of the letters.
     heap: list[Tree] = [Leaf(a, count) for a, count in Counter(x).items()]
-    hq.heapify(heap)
+    # heap = [Leaf(letter='a', count=3), Leaf(letter='b', count=1), 
+    # Leaf(letter='c', count=1)]
+    hq.heapify(heap) # the list representation of the heap is 
+    # 'heapified' so that it meets the min heap invariant. The values
+    # of the heap are Leafs to begin with and later on Nodes. 
+    # The counts for the letters are stored inside the nodes.  
+    # heap = [Leaf(letter='c', count=1), Leaf(letter='b', count=1), 
+    # Leaf(letter='a', count=3)]
 
-    while len(heap) > 1:
-        # FIXME: get the first two trees from the heap,
+    while len(heap) > 1: # when heap only contains one Node, the loop 
+        # body of the while loop will no longer be executed, and the 
+        # node of the heap will be returned. This node is the final 
+        # HuffmanTree.
+
+        # Get the first two trees from the heap,
         # merge them into one new Node with a count that
         # is the sum of the two trees, and with the two
         # trees as subtrees. Push that back onto the heap.
         # Remember that heap.pop() and heap.append() are
         # list operations, but you need to use the hq.heappop()
         # or hq.heappush() functions.
-        ...
+        
+        # hq.heappop() corresponds to delete_min(). Here, the value it
+        # returns is a Leaf or a Node. 
+        left = hq.heappop(heap)
+        right = hq.heappop(heap)
+        count = left.count + right.count
+        hq.heappush(heap, Node(count, left, right))
 
-    return heap.pop()
-
+    return hq.heappop(heap) # deletes the root node and return its 
+    # value. The values of the binary heap created using heapq.heapify
+    # are Huffman Trees. 
 
 def build_encoding_table(tree: Tree,
-                         bits: tuple[bits, ...] = (),
-                         res: Optional[dict[letters, bits]] = None,
+                         bits: list[bits, ...] = [], # list of single
+                         # bits as strings in book.
+                         table: Optional[dict[letters, bits]] = None, 
+                         # called table in book. dictionary w. string-
+                         # letters as keys and string-bits as values.
                          ) -> dict[letters, bits]:
-    """Traverse the tree to get the mapping for letters."""
-    # FIXME: Implement the mapping.
+    """Traverse the tree to get the mapping for letters.
+    >>> x = 'aabacabaaa'
+    >>> tree = encoding(x)
+    >>> build_encoding_table(tree)
+    {'c': '00', 'b': '01', 'a': '1'}
+    """
     # The bits argument is intended as an accumulator of bits
     # i.e. strings "0" or "1". If you are in a leaf, you can
     # "".join(bits) to get the bit pattern. If not, you can
@@ -92,12 +123,27 @@ def build_encoding_table(tree: Tree,
     # when you go right, add a 1. This isn't the most efficient
     # solution, but it gets the job done, and we don't expect
     # large trees in an application like this.
-    res = res if res is not None else {}
-    if isinstance(tree, Leaf):
-        ...
+    table = table if table is not None else {} # 'table' in 'if table' 
+    # evaluates to False if table = None and if table = {}.
+    if isinstance(tree, Leaf): # isinstance() returns True if the 
+        # object given as the first argument is of the type given by
+        # the second argument. 
+        # isinstance(tree, Leaf) returns True if the tree is an object
+        # of the type Leaf.
+        table[tree.letter] = ''.join(bits)
+        return table
     else:
-        ...
-    return res
+        # go to the left
+        bits.append('0')
+        build_encoding_table(tree.left, bits, table)
+        # go to parent
+        bits.pop()
+        # go to the right
+        bits.append('1')
+        build_encoding_table(tree.right, bits, table)
+        # go to parent
+        bits.pop()
+        return table
 
 
 class BitIterator:
@@ -115,7 +161,7 @@ class BitIterator:
 
     bit_itr: Iterator[bits]
 
-    def __init__(self, x: bits):
+    def __init__(self, x: bits): 
         """Set up the iterator."""
         self.bit_itr = iter(x)
 
@@ -128,21 +174,28 @@ class BitIterator:
         try:
             return next(self.bits)
         except StopIteration:
-            return None
+            return
 
 
+# hvilken type object er x, siden det er nødvendigt med iter(x)?
+# enc er et object af typen Encoding. enc.tree giver et Huffmann tree
+# for en string. enc.table giver en dictionary med letters som keys og
+# bit-strings som values.
 def decode(x: bits, enc: Encoding) -> str:
-    """Decode the bit pattern x according to enc."""
+    """Decode the bit pattern x according to enc.
+    >>> decode('1101100101111', Encoding('aabacabaaa'))
+    'aabacabaaa'
+    """
     bits = iter(x)  # Makes it easier to run thought the bits
     node = enc.tree  # We start in the root
-    decoding: list[str] = []
+    decoding: list[str] = [] # list with letters. 
 
     # When we have no more bits and ask for the next, we get
     # a StopIteration. We will catch that and deal with it
     # below
     try:
         while True:  # we break when there are no more bits
-            # FIXME: Handle the current node.
+            # Handle the current node.
             # If it is a leaf, you want to add its letter to
             # decoding, and after that you should go back to
             # the root.
@@ -150,9 +203,18 @@ def decode(x: bits, enc: Encoding) -> str:
             # bit, you can do that with `b = next(bits)`, and
             # then you move the node to the left or right child
             # based on the bit.
-            ...
 
-    except StopIteration:
+            # b = next(bits) skal også bruges for at få den første bit.
+            b = next(bits)
+            if b == '0':
+                node = node.left
+            if b == '1': 
+                node = node.right
+            if isinstance(node, Leaf):
+                decoding.append(node.letter)
+                node = enc.tree
+    except StopIteration: # How come StopIteration exception, when this
+        # already handled in the next() method?
         # When we asked for a bit that wasn't there, we end
         # up here. We need to wrap up. We should only ever
         # end here when we are in the root, so we assert that
@@ -160,21 +222,20 @@ def decode(x: bits, enc: Encoding) -> str:
     # and if that is fine, we can return the decoding
     return "".join(decoding)
 
-
 class Encoding:
     """Class used for Huffman encoding and decoding."""
 
     tree: Tree  # The Huffman tree for the encoding.
-    alphabet: dict[letters, bits]  # Maps each letter to a bit-pattern
+    table: dict[letters, bits]  # Maps each letter to a bit-pattern 
 
     def __init__(self, x: str):
         """Create the encoding for `x`."""
-        self.tree = encoding(x)
-        self.alphabet = build_encoding_table(self.tree)
+        self.tree = encoding(x) # build_huffmann_tree()
+        self.table = build_encoding_table(self.tree) 
 
     def encode(self, x: str) -> bits:
         """Encode the string x according to the encoding."""
-        return "".join(self.alphabet[a] for a in x)
+        return "".join(self.table[letter] for letter in x)
 
     def decode(self, x: bits) -> str:
         """Decode x according to this encoding."""
